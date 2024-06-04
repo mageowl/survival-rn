@@ -1,18 +1,31 @@
 use std::{cell::RefCell, rc::Rc};
 
-use super::grid::GridPos;
+use raylib::color::Color;
+
+use super::grid::{Grid, GridPos};
 use crate::world::World;
+
+pub struct SpeciesConfig {
+    /// Color of creatures
+    pub color: Color,
+    /// Number of creatures in a pack
+    pub num_creatures: usize,
+    /// Number of packs
+    pub num_packs: usize,
+}
 
 pub struct Species {
     members: Vec<GridPos>,
-    world: Rc<RefCell<World>>,
+    grid: Rc<RefCell<Grid<40, 30>>>,
+    color: Color,
 }
 
 impl Species {
-    pub fn new(world: &Rc<RefCell<World>>) -> Self {
+    pub(super) fn new(world: &World, color: Color) -> Self {
         Self {
             members: Vec::new(),
-            world: world.clone(),
+            grid: world.grid.clone(),
+            color,
         }
     }
 }

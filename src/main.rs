@@ -42,6 +42,6 @@ fn main() {
         let mut d = d.begin_mode2D(camera);
 
         d.clear_background(Color::TAN);
-        // d.draw_rectangle(-5, -5, 10, 10, Color::WHITE)
+        world.grid.borrow().render(&mut d, &assets);
     }
 }

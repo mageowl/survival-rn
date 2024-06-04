@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use grid::{Grid, Tile};
-use species::Species;
+use species::{Species, SpeciesConfig};
 
 mod grid;
 mod species;
@@ -16,8 +16,8 @@ pub struct SimConfig {
 }
 
 pub struct World {
-    grid: Grid<40, 30>,
-    species: Vec<Species>,
+    pub grid: Rc<RefCell<Grid<40, 30>>>,
+    pub species: Vec<Species>,
 }
 
 impl World {
@@ -41,8 +41,12 @@ impl World {
         }
 
         Self {
-            grid,
+            grid: Rc::new(RefCell::new(grid)),
             species: Vec::new(),
         }
+    }
+
+    pub fn add_species(&mut self, config: SpeciesConfig) {
+        self.species.push(Species::new(&self, config.color));
     }
 }
