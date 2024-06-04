@@ -33,9 +33,9 @@ fn main() {
         let mut d = rl.begin_drawing(&thread);
         let mut d = d.begin_mode2D(camera);
 
-        d.clear_background(Color::BLACK);
+        d.clear_background(Color::TAN);
 
-        d.draw_texture(&assets.agent, 0, 0, Color::GREEN)
+        d.draw_texture(&assets.agent, 0, 0, Color::new(89, 205, 75, 255))
         // d.draw_rectangle(-5, -5, 10, 10, Color::WHITE)
     }
 }
