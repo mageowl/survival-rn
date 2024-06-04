@@ -1,10 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
-use grid::{Grid, Tile};
+use grid::{Grid, Pos, Tile};
 use species::{Species, SpeciesConfig};
 
+use crate::util::{GRID_HEIGHT, GRID_WIDTH};
+
 mod grid;
-mod species;
+pub mod species;
 
 pub struct SimConfig {
     /// Number of moons to simulate.
@@ -16,7 +18,7 @@ pub struct SimConfig {
 }
 
 pub struct World {
-    pub grid: Rc<RefCell<Grid<40, 30>>>,
+    pub grid: Rc<RefCell<Grid<GRID_WIDTH, GRID_HEIGHT>>>,
     pub species: Vec<Species>,
 }
 
@@ -25,19 +27,20 @@ impl World {
         let mut grid = Grid::empty();
 
         for _i in 0..config.num_food {
-            let mut pos: (usize, usize) = (
-                (rand::random::<f64>() * 40.0).floor() as usize,
-                (rand::random::<f64>() * 30.0).floor() as usize,
-            );
+            let mut pos;
 
-            while let Tile::Bush(_) = grid.at(pos) {
-                pos = (
-                    (rand::random::<f32>() * 40.0).floor() as usize,
-                    (rand::random::<f32>() * 30.0).floor() as usize,
+            loop {
+                pos = Pos(
+                    (rand::random::<f64>() * GRID_WIDTH as f64).floor() as usize,
+                    (rand::random::<f64>() * GRID_HEIGHT as f64).floor() as usize,
                 );
+
+                if let Tile::Empty = grid[pos] {
+                    break;
+                }
             }
 
-            grid.set(pos, Tile::Bush(true))
+            grid[pos] = Tile::Bush(true);
         }
 
         Self {
@@ -47,6 +50,47 @@ impl World {
     }
 
     pub fn add_species(&mut self, config: SpeciesConfig) {
-        self.species.push(Species::new(&self, config.color));
+        let mut species = Species::new(self.species.len(), &self, config.color);
+
+        for _ in 0..config.num_packs {
+            let mut pos;
+
+            loop {
+                pos = Pos(
+                    (rand::random::<f64>() * GRID_WIDTH as f64).floor() as usize,
+                    (rand::random::<f64>() * GRID_HEIGHT as f64).floor() as usize,
+                );
+
+                if pos.0 <= GRID_WIDTH - 4 && pos.1 <= GRID_HEIGHT - 4 {
+                    if let Tile::Empty = self.grid.borrow()[pos] {
+                        break;
+                    }
+                }
+            }
+
+            for _ in 0..config.num_creatures {
+                let mut offset;
+
+                loop {
+                    offset = Pos(
+                        (rand::random::<f64>() * 5.0).floor() as usize,
+                        (rand::random::<f64>() * 5.0).floor() as usize,
+                    );
+
+                    if let Tile::Empty = self.grid.borrow()[pos + offset] {
+                        break;
+                    }
+                }
+
+                self.grid.borrow_mut()[pos + offset] = Tile::Creature {
+                    species: species.id,
+                    color: species.color,
+                    food: 0,
+                };
+                species.members.push(pos + offset);
+            }
+        }
+
+        self.species.push(species);
     }
 }

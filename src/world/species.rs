@@ -2,8 +2,11 @@ use std::{cell::RefCell, rc::Rc};
 
 use raylib::color::Color;
 
-use super::grid::{Grid, GridPos};
-use crate::world::World;
+use super::grid::{Grid, Pos};
+use crate::{
+    util::{GRID_HEIGHT, GRID_WIDTH},
+    world::World,
+};
 
 pub struct SpeciesConfig {
     /// Color of creatures
@@ -15,14 +18,16 @@ pub struct SpeciesConfig {
 }
 
 pub struct Species {
-    members: Vec<GridPos>,
-    grid: Rc<RefCell<Grid<40, 30>>>,
-    color: Color,
+    pub id: usize,
+    pub members: Vec<Pos>,
+    pub color: Color,
+    grid: Rc<RefCell<Grid<GRID_WIDTH, GRID_HEIGHT>>>,
 }
 
 impl Species {
-    pub(super) fn new(world: &World, color: Color) -> Self {
+    pub(super) fn new(id: usize, world: &World, color: Color) -> Self {
         Self {
+            id,
             members: Vec::new(),
             grid: world.grid.clone(),
             color,

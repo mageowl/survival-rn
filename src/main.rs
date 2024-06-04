@@ -5,15 +5,37 @@ use raylib::{
     drawing::{RaylibDraw, RaylibMode2DExt},
     math::Vector2,
 };
-use world::{SimConfig, World};
+use util::{GRID_HEIGHT, GRID_WIDTH, HEPT32, TILE_SIZE};
+use world::{species::SpeciesConfig, SimConfig, World};
 
 mod assets;
+mod util;
 mod world;
 
 const ZOOM: f32 = 2.0;
-const VIEW_SIZE: (i32, i32) = (40 * 16 * ZOOM as i32, 30 * 16 * ZOOM as i32);
+const VIEW_SIZE: (i32, i32) = (
+    GRID_WIDTH as i32 * TILE_SIZE * ZOOM as i32,
+    GRID_HEIGHT as i32 * TILE_SIZE * ZOOM as i32,
+);
 
 fn main() {
+    let mut world = World::new(SimConfig {
+        num_moons: 10,
+        num_food: 20,
+        chance_regrow: 0.5,
+    });
+
+    world.add_species(SpeciesConfig {
+        color: HEPT32::GREEN,
+        num_creatures: 4,
+        num_packs: 2,
+    });
+    world.add_species(SpeciesConfig {
+        color: HEPT32::BLUE,
+        num_creatures: 1,
+        num_packs: 8,
+    });
+
     let (mut rl, thread) = raylib::init()
         .size(VIEW_SIZE.0, VIEW_SIZE.1)
         .title("Survival Sim")
@@ -21,12 +43,6 @@ fn main() {
         .build();
 
     let assets = assets::load(&mut rl, &thread);
-    let world = World::new(SimConfig {
-        num_moons: 10,
-        num_food: 60,
-        chance_regrow: 0.5,
-    });
-
     let camera = Camera2D {
         target: Vector2::zero(),
         offset: Vector2::zero(),
