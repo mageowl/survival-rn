@@ -114,12 +114,8 @@ impl Into<[f32; 2]> for Tile {
             Tile::Empty => [0.0, 0.0],
             Tile::OutOfBounds => [1.0 / 5.0, 0.0],
             Tile::Bush(has_food) => [2.0 / 5.0, if has_food { 1.0 } else { 0.0 }],
-            Tile::Wall { species, color } => [3.0 / 5.0, species as f32],
-            Tile::Creature {
-                species,
-                color,
-                food,
-            } => [1.0, species as f32],
+            Tile::Wall { species, .. } => [3.0 / 5.0, species as f32],
+            Tile::Creature { species, .. } => [1.0, species as f32],
         }
     }
 }

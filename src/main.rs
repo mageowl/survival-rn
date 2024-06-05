@@ -1,10 +1,4 @@
-use raylib::{
-    camera::Camera2D,
-    color::Color,
-    consts::TraceLogLevel,
-    drawing::{RaylibDraw, RaylibMode2DExt},
-    math::Vector2,
-};
+use train::train_species;
 use util::{GRID_HEIGHT, GRID_WIDTH, HEPT32, TILE_SIZE};
 use world::{species::SpeciesConfig, SimConfig, World};
 
@@ -21,7 +15,7 @@ const VIEW_SIZE: (i32, i32) = (
 
 fn main() {
     let mut world = World::new(SimConfig {
-        moon_len: 20,
+        moon_len: 1,
         num_food: 20,
         chance_regrow: 0.5,
     });
@@ -37,7 +31,7 @@ fn main() {
         num_packs: 8,
     });
 
-    world.add_species(config);
+    train_species(&mut world, 1);
 
     // let (mut rl, thread) = raylib::init()
     //     .size(VIEW_SIZE.0, VIEW_SIZE.1)

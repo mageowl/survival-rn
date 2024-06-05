@@ -1,11 +1,12 @@
 use rurel::{
     dqn::DQNAgentTrainer,
     mdp::{Agent, State},
+    strategy::{explore::RandomExploration, terminate::FixedIterations},
 };
 
 use crate::world::{
     grid::{Grid, Pos, Tile},
-    species::Species,
+    species::{self, Species},
     World,
 };
 
@@ -28,11 +29,14 @@ impl Into<[f32; 3]> for CreatureAction {
 
 impl From<[f32; 3]> for CreatureAction {
     fn from(arr: [f32; 3]) -> Self {
-        match arr[0] {
-            0.0 => Self::Move(arr[1] as i8, arr[2] as i8),
-            0.5 => Self::Attack(arr[1] as i8, arr[2] as i8),
-            1.0 => Self::BuildWall(arr[1] as i8, arr[2] as i8),
-            _ => panic!("Unknown action {arr:?}"),
+        if arr[0] == 0.0 {
+            Self::Move(arr[1] as i8, arr[2] as i8)
+        } else if arr[0] == 0.5 {
+            Self::Attack(arr[1] as i8, arr[2] as i8)
+        } else if arr[0] == 1.0 {
+            Self::BuildWall(arr[1] as i8, arr[2] as i8)
+        } else {
+            panic!("Unknown action {arr:?}")
         }
     }
 }
@@ -86,7 +90,7 @@ impl Into<[f32; 100]> for CreatureState {
     fn into(self) -> [f32; 100] {
         let mut vec = Vec::new();
 
-        for (i, tile) in self.slice.arr().iter().flatten().enumerate() {
+        for tile in self.slice.arr().iter().flatten() {
             vec.extend_from_slice(&Into::<[f32; 2]>::into(*tile));
         }
 
@@ -113,6 +117,16 @@ impl<'a> SpeciesAgent<'a> {
             creature_index: 0,
         }
     }
+
+    pub fn increment_index(&mut self) {
+        self.creature_index += 1;
+        self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
+    }
+
+    pub fn reset_index(&mut self) {
+        self.creature_index = 0;
+        self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
+    }
 }
 
 impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
@@ -122,20 +136,38 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
 
     fn take_action(&mut self, action: &<CreatureState as State>::A) {
         self.species.handle_action(*action, self.creature_index);
-
-        self.creature_index += 1;
-        self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
+        self.increment_index();
     }
 }
 
-pub fn train_species(&mut world: &mut World, num_moons: usize) {
-    let mut trainers = Vec::new();
-    let mut agents = Vec::new();
+pub fn train_species(world: &mut World, num_moons: usize) {
+    let mut models: Vec<(
+        DQNAgentTrainer<CreatureState, 100, 3, 128>,
+        SpeciesAgent,
+        &Species,
+    )> = world
+        .species
+        .iter()
+        .map(|species| {
+            (
+                DQNAgentTrainer::<CreatureState, 100, 3, 128>::new(0.9, 1e-3),
+                SpeciesAgent::new(&species, &world),
+                species,
+            )
+        })
+        .collect();
 
-    for species in world.species {
-        trainers.push(DQNAgentTrainer::<CreatureState, 100, 3, 128>::new(
-            0.9, 1e-3,
-        ));
-        agents.push(SpeciesAgent::new(&species, &world));
+    for _moon in 0..num_moons {
+        for _step in 0..world.config.moon_len {
+            for (trainer, agent, species) in &mut models {
+                trainer.train(
+                    agent,
+                    &mut FixedIterations::new(species.members.len() as u32),
+                    &RandomExploration::new(),
+                );
+                agent.reset_index();
+                println!("trained species once")
+            }
+        }
     }
 }
