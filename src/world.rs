@@ -9,8 +9,6 @@ pub mod grid;
 pub mod species;
 
 pub struct SimConfig {
-    /// Number of moons to simulate.
-    pub num_moons: usize,
     /// Number of steps per moon.
     pub moon_len: usize,
     /// Number of bushes to spawn.

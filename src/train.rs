@@ -1,4 +1,7 @@
-use rurel::mdp::{Agent, State};
+use rurel::{
+    dqn::DQNAgentTrainer,
+    mdp::{Agent, State},
+};
 
 use crate::world::{
     grid::{Grid, Pos, Tile},
@@ -11,6 +14,27 @@ pub enum CreatureAction {
     Move(i8, i8),
     Attack(i8, i8),
     BuildWall(i8, i8),
+}
+
+impl Into<[f32; 3]> for CreatureAction {
+    fn into(self) -> [f32; 3] {
+        match self {
+            CreatureAction::Move(x, y) => [0.0, x as f32, y as f32],
+            CreatureAction::Attack(x, y) => [0.5, x as f32, y as f32],
+            CreatureAction::BuildWall(x, y) => [1.0, x as f32, y as f32],
+        }
+    }
+}
+
+impl From<[f32; 3]> for CreatureAction {
+    fn from(arr: [f32; 3]) -> Self {
+        match arr[0] {
+            0.0 => Self::Move(arr[1] as i8, arr[2] as i8),
+            0.5 => Self::Attack(arr[1] as i8, arr[2] as i8),
+            1.0 => Self::BuildWall(arr[1] as i8, arr[2] as i8),
+            _ => panic!("Unknown action {arr:?}"),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Hash, Clone)]
@@ -58,6 +82,21 @@ impl State for CreatureState {
     }
 }
 
+impl Into<[f32; 100]> for CreatureState {
+    fn into(self) -> [f32; 100] {
+        let mut vec = Vec::new();
+
+        for (i, tile) in self.slice.arr().iter().flatten().enumerate() {
+            vec.extend_from_slice(&Into::<[f32; 2]>::into(*tile));
+        }
+
+        vec.push(self.food as f32);
+        vec.push(self.time_left as f32);
+
+        vec.try_into().expect("too many tiles in grid")
+    }
+}
+
 pub struct SpeciesAgent<'a> {
     state: CreatureState,
     species: &'a Species,
@@ -86,5 +125,17 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
 
         self.creature_index += 1;
         self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
+    }
+}
+
+pub fn train_species(&mut world: &mut World, num_moons: usize) {
+    let mut trainers = Vec::new();
+    let mut agents = Vec::new();
+
+    for species in world.species {
+        trainers.push(DQNAgentTrainer::<CreatureState, 100, 3, 128>::new(
+            0.9, 1e-3,
+        ));
+        agents.push(SpeciesAgent::new(&species, &world));
     }
 }

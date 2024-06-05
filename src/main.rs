@@ -21,7 +21,6 @@ const VIEW_SIZE: (i32, i32) = (
 
 fn main() {
     let mut world = World::new(SimConfig {
-        num_moons: 10,
         moon_len: 20,
         num_food: 20,
         chance_regrow: 0.5,
@@ -38,28 +37,30 @@ fn main() {
         num_packs: 8,
     });
 
-    let (mut rl, thread) = raylib::init()
-        .size(VIEW_SIZE.0, VIEW_SIZE.1)
-        .title("Survival Sim")
-        .log_level(TraceLogLevel::LOG_ERROR)
-        .build();
+    world.add_species(config);
 
-    let assets = assets::load(&mut rl, &thread);
-    let camera = Camera2D {
-        target: Vector2::zero(),
-        offset: Vector2::zero(),
-        rotation: 0.0,
-        zoom: ZOOM,
-    };
+    // let (mut rl, thread) = raylib::init()
+    //     .size(VIEW_SIZE.0, VIEW_SIZE.1)
+    //     .title("Survival Sim")
+    //     .log_level(TraceLogLevel::LOG_ERROR)
+    //     .build();
 
-    while !rl.window_should_close() {
-        // UPDATE //
+    // let assets = assets::load(&mut rl, &thread);
+    // let camera = Camera2D {
+    //     target: Vector2::zero(),
+    //     offset: Vector2::zero(),
+    //     rotation: 0.0,
+    //     zoom: ZOOM,
+    // };
 
-        // DRAW //
-        let mut d = rl.begin_drawing(&thread);
-        let mut d = d.begin_mode2D(camera);
+    // while !rl.window_should_close() {
+    //     // UPDATE //
 
-        d.clear_background(Color::TAN);
-        world.grid.borrow().render(&mut d, &assets);
-    }
+    //     // DRAW //
+    //     let mut d = rl.begin_drawing(&thread);
+    //     let mut d = d.begin_mode2D(camera);
+
+    //     d.clear_background(Color::TAN);
+    //     world.grid.borrow().render(&mut d, &assets);
+    // }
 }
