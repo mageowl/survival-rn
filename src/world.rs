@@ -5,7 +5,7 @@ use species::{Species, SpeciesConfig};
 
 use crate::util::{GRID_HEIGHT, GRID_WIDTH};
 
-mod grid;
+pub mod grid;
 pub mod species;
 
 pub struct SimConfig {

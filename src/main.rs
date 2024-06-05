@@ -9,6 +9,7 @@ use util::{GRID_HEIGHT, GRID_WIDTH, HEPT32, TILE_SIZE};
 use world::{species::SpeciesConfig, SimConfig, World};
 
 mod assets;
+mod train;
 mod util;
 mod world;
 
@@ -35,6 +36,8 @@ fn main() {
         num_creatures: 1,
         num_packs: 8,
     });
+
+    dbg!(world.species[0].get_view_slice(0));
 
     let (mut rl, thread) = raylib::init()
         .size(VIEW_SIZE.0, VIEW_SIZE.1)

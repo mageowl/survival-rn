@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use raylib::color::Color;
 
-use super::grid::{Grid, Pos};
+use super::grid::{Grid, IPos, Pos, Tile};
 use crate::{
     util::{GRID_HEIGHT, GRID_WIDTH},
     world::World,
@@ -25,12 +25,33 @@ pub struct Species {
 }
 
 impl Species {
-    pub(super) fn new(id: usize, world: &World, color: Color) -> Self {
+    pub fn new(id: usize, world: &World, color: Color) -> Self {
         Self {
             id,
             members: Vec::new(),
             grid: world.grid.clone(),
             color,
+        }
+    }
+
+    pub fn get_view_slice(&self, index: usize) -> [[Tile; 7]; 7] {
+        let i_pos: IPos = Into::<IPos>::into(self.members[0]) - IPos(3, 3);
+
+        if let Ok(pos) = i_pos.try_into() {
+            self.grid.borrow().slice(pos)
+        } else {
+            self.grid.borrow().i_slice(i_pos)
+        }
+    }
+
+    pub fn get_food(&self, index: usize) -> usize {
+        if let Tile::Creature { food, .. } = self.grid.borrow()[self.members[index]] {
+            food
+        } else {
+            panic!(
+                "Expected creature at position {}. (Trying to access amount of food)",
+                self.members[index]
+            );
         }
     }
 }
