@@ -45,7 +45,12 @@ impl State for CreatureState {
 
         for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
             if let Tile::Empty = self.slice[Pos(4, 4) + direction] {
-                actions.push(CreatureAction::Move(direction.0, direction.1))
+                actions.push(CreatureAction::Move(direction.0, direction.1));
+                actions.push(CreatureAction::BuildWall(direction.0, direction.1));
+            }
+
+            if let Tile::Bush(true) | Tile::Creature { .. } = self.slice[Pos(4, 4) + direction] {
+                actions.push(CreatureAction::Attack(direction.0, direction.1));
             }
         }
 
