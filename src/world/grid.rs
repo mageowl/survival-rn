@@ -137,9 +137,15 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
         Pos(x, y): Pos,
     ) -> [[Tile; SLICE_WIDTH]; SLICE_HEIGHT] {
         let mut slice = [[Tile::OutOfBounds; SLICE_WIDTH]; SLICE_HEIGHT];
+        let (mx, my) = (
+            (x + SLICE_WIDTH).clamp(0, WIDTH),
+            (y + SLICE_HEIGHT).clamp(0, HEIGHT),
+        );
 
-        for (i, row) in self.arr[y..y + SLICE_HEIGHT].iter().enumerate() {
-            slice[i].copy_from_slice(&row[x..x + SLICE_WIDTH]);
+        for (i, row) in self.arr[y..my].iter().enumerate() {
+            for (j, tile) in row[x..mx].iter().enumerate() {
+                slice[i][j] = *tile;
+            }
         }
 
         slice
@@ -150,11 +156,11 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
         IPos(x, y): IPos,
     ) -> [[Tile; SLICE_WIDTH]; SLICE_HEIGHT] {
         let mut slice = [[Tile::OutOfBounds; SLICE_WIDTH]; SLICE_HEIGHT];
-        let (ox, oy) = (-x.max(0) as usize, -y.max(0) as usize);
+        let (ox, oy) = ((-x).max(0) as usize, (-y).max(0) as usize);
         let (cx, cy) = (x.max(0) as usize, y.max(0) as usize);
         let (mx, my) = (
-            (x + SLICE_WIDTH as isize).max(0) as usize,
-            (y + SLICE_HEIGHT as isize).max(0) as usize,
+            (x + SLICE_WIDTH as isize).clamp(0, WIDTH as isize) as usize,
+            (y + SLICE_HEIGHT as isize).clamp(0, HEIGHT as isize) as usize,
         );
 
         for (i, row) in self.arr[cy..my].iter().enumerate() {
