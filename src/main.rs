@@ -22,6 +22,7 @@ const VIEW_SIZE: (i32, i32) = (
 fn main() {
     let mut world = World::new(SimConfig {
         num_moons: 10,
+        moon_len: 20,
         num_food: 20,
         chance_regrow: 0.5,
     });
@@ -36,8 +37,6 @@ fn main() {
         num_creatures: 1,
         num_packs: 8,
     });
-
-    dbg!(world.species[0].get_view_slice(0));
 
     let (mut rl, thread) = raylib::init()
         .size(VIEW_SIZE.0, VIEW_SIZE.1)

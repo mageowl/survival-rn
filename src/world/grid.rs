@@ -19,6 +19,17 @@ impl Add<Pos> for Pos {
     }
 }
 
+impl Add<(i8, i8)> for Pos {
+    type Output = Pos;
+
+    fn add(self, rhs: (i8, i8)) -> Self::Output {
+        Pos(
+            (self.0 as isize + rhs.0 as isize) as usize,
+            (self.1 as isize + rhs.1 as isize) as usize,
+        )
+    }
+}
+
 impl Into<IPos> for Pos {
     fn into(self) -> IPos {
         IPos(self.0 as isize, self.1 as isize)
@@ -67,7 +78,10 @@ pub enum Tile {
     Empty,
     OutOfBounds,
     Bush(bool),
-    Wall(usize),
+    Wall {
+        species: usize,
+        color: Color,
+    },
     Creature {
         species: usize,
         color: Color,
@@ -88,12 +102,13 @@ impl Debug for Tile {
             Self::OutOfBounds => write!(f, "X"),
             Self::Bush(true) => write!(f, "%"),
             Self::Bush(false) => write!(f, "/"),
-            Self::Wall(_) => write!(f, "#"),
+            Self::Wall { .. } => write!(f, "#"),
             Self::Creature { .. } => write!(f, "@"),
         }
     }
 }
 
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct Grid<const WIDTH: usize, const HEIGHT: usize> {
     arr: [[Tile; WIDTH]; HEIGHT],
 }
@@ -154,7 +169,7 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
                         y as i32 * TILE_SIZE,
                         Color::WHITE,
                     ),
-                    Tile::Wall(_species) => todo!(),
+                    Tile::Wall { .. } => todo!(),
                     Tile::Creature { color, food, .. } => {
                         d.draw_texture(
                             &assets.agent,
@@ -195,5 +210,13 @@ impl<const WIDTH: usize, const HEIGHT: usize> Index<Pos> for Grid<WIDTH, HEIGHT>
         } else {
             &self.arr[y][x]
         }
+    }
+}
+
+impl<const WIDTH: usize, const HEIGHT: usize> From<[[Tile; WIDTH]; HEIGHT]>
+    for Grid<WIDTH, HEIGHT>
+{
+    fn from(arr: [[Tile; WIDTH]; HEIGHT]) -> Self {
+        Self { arr }
     }
 }

@@ -11,6 +11,8 @@ pub mod species;
 pub struct SimConfig {
     /// Number of moons to simulate.
     pub num_moons: usize,
+    /// Number of steps per moon.
+    pub moon_len: usize,
     /// Number of bushes to spawn.
     pub num_food: usize,
     /// Chance that a given bush regrows in between moons.
@@ -20,6 +22,9 @@ pub struct SimConfig {
 pub struct World {
     pub grid: Rc<RefCell<Grid<GRID_WIDTH, GRID_HEIGHT>>>,
     pub species: Vec<Species>,
+    pub time_left: usize,
+    moon_len: usize,
+    chance_regrow: f64,
 }
 
 impl World {
@@ -46,6 +51,9 @@ impl World {
         Self {
             grid: Rc::new(RefCell::new(grid)),
             species: Vec::new(),
+            time_left: config.moon_len,
+            moon_len: config.moon_len,
+            chance_regrow: config.chance_regrow,
         }
     }
 
