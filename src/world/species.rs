@@ -9,6 +9,7 @@ use crate::{
     world::World,
 };
 
+#[derive(Clone, Copy)]
 pub struct SpeciesConfig {
     /// Color of creatures
     pub color: Color,

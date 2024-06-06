@@ -144,7 +144,6 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
     }
 
     fn take_action(&mut self, action: &CreatureAction) {
-        println!("take action #{}", self.creature_index);
         self.species.handle_action(*action, self.creature_index);
         if self.creature_index < self.iters - 1 {
             self.increment_index();
@@ -152,50 +151,45 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
     }
 }
 
-pub type SpeciesModel<'a> = (
-    DQNAgentTrainer<CreatureState, 100, 3, 128>,
-    SpeciesAgent<'a>,
-    &'a Species,
-);
+pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 3, 128>;
 
-impl World {
-    pub fn train_moons(
-        &mut self,
-        num_moons: usize,
-    ) -> Vec<DQNAgentTrainer<CreatureState, 100, 3, 128>> {
-        let mut models: Vec<SpeciesModel> = Vec::new();
-        for species in &self.species {
-            models.push((
-                DQNAgentTrainer::new(0.9, 1e-3),
-                SpeciesAgent::new(&species),
-                species,
-            ));
-        }
+pub fn train_moons(
+    world: &mut World,
+    num_moons: usize,
+) -> Vec<DQNAgentTrainer<CreatureState, 100, 3, 128>> {
+    let mut models = Vec::new();
+    for species in &world.species {
+        models.push((
+            DQNAgentTrainer::new(0.9, 1e-3),
+            SpeciesAgent::new(&species),
+            species,
+        ));
+    }
 
-        for moon in 0..num_moons {
-            for step in 0..self.config.moon_len {
-                for (trainer, agent, species) in &mut models {
-                    let iterations = species.members.borrow().len();
-                    if iterations == 0 {
-                        continue;
-                    }
-
-                    agent.time_left = self.config.moon_len - step;
-                    agent.iters = iterations;
-                    trainer.train(
-                        agent,
-                        &mut FixedIterations::new(iterations as u32),
-                        &RandomExploration::new(),
-                    );
-                    agent.reset_index();
+    for moon in 0..num_moons {
+        for step in 0..world.config.moon_len {
+            for (trainer, agent, species) in &mut models {
+                let iterations = species.members.borrow().len();
+                if iterations == 0 {
+                    continue;
                 }
 
-                self.finish_step();
+                agent.time_left = world.config.moon_len - step;
+                agent.iters = iterations;
+                trainer.train(
+                    agent,
+                    &mut FixedIterations::new(iterations as u32),
+                    &RandomExploration::new(),
+                );
+                agent.reset_index();
             }
-            self.finish_moon();
-            println!("Moon {moon}/{num_moons}")
+
+            world.finish_step();
         }
 
-        models.into_iter().map(|(trainer, ..)| trainer).collect()
+        world.finish_moon();
+        println!("Moon {moon}/{num_moons}");
     }
+
+    models.into_iter().map(|(trainer, ..)| trainer).collect()
 }

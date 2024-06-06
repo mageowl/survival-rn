@@ -7,6 +7,7 @@ use raylib::{
 };
 
 use crate::{
+    train::SpeciesModel,
     util::{GRID_HEIGHT, GRID_WIDTH, TILE_SIZE},
     world::World,
 };
@@ -19,7 +20,7 @@ const VIEW_SIZE: (i32, i32) = (
     GRID_HEIGHT as i32 * TILE_SIZE * ZOOM as i32,
 );
 
-pub fn run_simulation(world: World) {
+pub fn run_simulation(world: &mut World, models: Vec<SpeciesModel>) {
     let (mut rl, thread) = raylib::init()
         .size(VIEW_SIZE.0, VIEW_SIZE.1)
         .title("Survival Sim")

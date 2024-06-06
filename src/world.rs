@@ -8,6 +8,7 @@ use crate::util::{GRID_HEIGHT, GRID_WIDTH};
 pub mod grid;
 pub mod species;
 
+#[derive(Clone, Copy)]
 pub struct SimConfig {
     /// Number of steps per moon.
     pub moon_len: usize,
@@ -15,6 +16,8 @@ pub struct SimConfig {
     pub num_food: usize,
     /// Chance that a given bush regrows in between moons.
     pub chance_regrow: f64,
+    /// List of species to include in simulation
+    pub species: &'static [SpeciesConfig],
 }
 
 pub struct World {
@@ -45,15 +48,21 @@ impl World {
             grid[pos] = Tile::Bush(true);
         }
 
-        Self {
+        let mut s = Self {
             grid: Rc::new(RefCell::new(grid)),
             species: Vec::new(),
             time_left: config.moon_len,
             config,
+        };
+
+        for species in config.species {
+            s.add_species(*species);
         }
+
+        s
     }
 
-    pub fn add_species(&mut self, config: SpeciesConfig) {
+    fn add_species(&mut self, config: SpeciesConfig) {
         let species = Species::new(self.species.len(), &self, config.color);
 
         for _ in 0..config.num_packs {
@@ -127,5 +136,33 @@ impl World {
         }
     }
 
-    pub fn finish_moon(&self) {}
+    pub fn finish_moon(&self) {
+        let mut grid = self.grid.borrow_mut();
+        for (y, row) in grid.arr().iter().enumerate() {
+            for (x, tile) in row.iter().enumerate() {
+                match *tile {
+                    Tile::Bush(false) => {
+                        if rand::random::<f64>() > self.config.chance_regrow {
+                            grid[Pos(x, y)] = Tile::Bush(true);
+                        }
+                    }
+                    Tile::Creature {
+                        food,
+                        species,
+                        color,
+                    } => {
+                        grid[Pos(x, y)] = Tile::Creature {
+                            species,
+                            color,
+                            food: food - 2,
+                        };
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        drop(grid);
+        self.finish_step()
+    }
 }

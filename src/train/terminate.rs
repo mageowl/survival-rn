@@ -23,7 +23,6 @@ impl FixedIterations {
 impl<S: State> TerminationStrategy<S> for FixedIterations {
     fn should_stop(&mut self, _: &S) -> bool {
         self.i += 1;
-        dbg!(self.i);
         self.i >= self.iters
     }
 }
