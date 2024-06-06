@@ -7,7 +7,7 @@ use rurel::{
 use crate::world::{
     grid::{Grid, Pos, Tile},
     species::Species,
-    World,
+    SimConfig, World,
 };
 use terminate::FixedIterations;
 
@@ -18,6 +18,7 @@ pub enum CreatureAction {
     Move(i8, i8),
     Attack(i8, i8),
     BuildWall(i8, i8),
+    DoNothing,
 }
 
 impl Into<[f32; 3]> for CreatureAction {
@@ -26,6 +27,7 @@ impl Into<[f32; 3]> for CreatureAction {
             CreatureAction::Move(x, y) => [0.0, x as f32, y as f32],
             CreatureAction::Attack(x, y) => [0.5, x as f32, y as f32],
             CreatureAction::BuildWall(x, y) => [1.0, x as f32, y as f32],
+            CreatureAction::DoNothing => [-1.0, 0.0, 0.0],
         }
     }
 }
@@ -38,6 +40,8 @@ impl From<[f32; 3]> for CreatureAction {
             Self::Attack(arr[1] as i8, arr[2] as i8)
         } else if arr[0] == 1.0 {
             Self::BuildWall(arr[1] as i8, arr[2] as i8)
+        } else if arr[0] == -1.0 {
+            Self::DoNothing
         } else {
             panic!("Unknown action {arr:?}")
         }
@@ -55,7 +59,7 @@ pub struct CreatureState {
 }
 
 impl CreatureState {
-    fn new(species: &Species, time_left: usize, index: usize) -> Self {
+    pub fn new(species: &Species, time_left: usize, index: usize) -> Self {
         Self {
             slice: species.get_view_slice(index),
             food: species.get_food(index),
@@ -87,6 +91,10 @@ impl State for CreatureState {
                 }
                 _ => (),
             }
+        }
+
+        if actions.len() == 0 {
+            actions.push(CreatureAction::DoNothing);
         }
 
         actions
@@ -151,45 +159,68 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
     }
 }
 
+impl SimConfig {
+    pub fn create_dqn_models(&self) -> Vec<SpeciesModel> {
+        let mut models = Vec::new();
+
+        for _ in self.species {
+            models.push(Default::default());
+        }
+
+        models
+    }
+}
+
 pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 3, 128>;
 
-pub fn train_moons(
-    world: &mut World,
-    num_moons: usize,
-) -> Vec<DQNAgentTrainer<CreatureState, 100, 3, 128>> {
-    let mut models = Vec::new();
-    for species in &world.species {
-        models.push((
-            DQNAgentTrainer::new(0.9, 1e-3),
-            SpeciesAgent::new(&species),
-            species,
-        ));
+pub fn train_moons(world: &mut World, models: &mut Vec<SpeciesModel>, num_moons: usize) {
+    let mut species_data = Vec::new();
+    for (species, model) in world.species.iter().zip(models.iter_mut()) {
+        species_data.push((model, SpeciesAgent::new(&species), species));
     }
 
     for moon in 0..num_moons {
         for step in 0..world.config.moon_len {
-            for (trainer, agent, species) in &mut models {
+            for (trainer, agent, species) in &mut species_data {
                 let iterations = species.members.borrow().len();
                 if iterations == 0 {
                     continue;
                 }
 
+                agent.reset_index();
                 agent.time_left = world.config.moon_len - step;
                 agent.iters = iterations;
+
                 trainer.train(
                     agent,
                     &mut FixedIterations::new(iterations as u32),
                     &RandomExploration::new(),
                 );
-                agent.reset_index();
             }
 
             world.finish_step();
         }
 
         world.finish_moon();
-        println!("Moon {moon}/{num_moons}");
+        println!("  Moon {}/{num_moons}", moon + 1);
+
+        if !world.species.iter().any(|s| s.members.borrow().len() > 0) {
+            println!("  Finished due to extinction.");
+            break;
+        }
+    }
+}
+
+pub fn train_iters(config: SimConfig, num_iters: usize, num_moons: usize) -> Vec<SpeciesModel> {
+    let mut models = config.create_dqn_models();
+
+    for i in 0..num_iters {
+        let mut world = World::new(config);
+
+        train_moons(&mut world, &mut models, num_moons);
+
+        println!("# Epoch {}/{num_iters} complete.\n", i + 1)
     }
 
-    models.into_iter().map(|(trainer, ..)| trainer).collect()
+    models
 }

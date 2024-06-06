@@ -129,6 +129,7 @@ impl Species {
                     ),
                 };
             }
+            CreatureAction::DoNothing => (),
         }
     }
 }

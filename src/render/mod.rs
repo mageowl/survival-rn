@@ -7,7 +7,7 @@ use raylib::{
 };
 
 use crate::{
-    train::SpeciesModel,
+    train::{CreatureState, SpeciesModel},
     util::{GRID_HEIGHT, GRID_WIDTH, TILE_SIZE},
     world::World,
 };
@@ -35,12 +35,30 @@ pub fn run_simulation(world: &mut World, models: Vec<SpeciesModel>) {
         zoom: ZOOM,
     };
 
-    let mut time = 0.0;
+    let mut step_timer = 0.0;
+    let mut time_left = world.config.moon_len;
     while !rl.window_should_close() {
         // UPDATE //
-        time += rl.get_frame_time();
-        if time >= 1.0 {
-            time = 0.0;
+        step_timer += rl.get_frame_time();
+        if step_timer >= 1.0 {
+            step_timer = 0.0;
+            time_left -= 1;
+            for (i, species) in world.species.iter_mut().enumerate() {
+                for creature in 0..species.members.borrow().len() {
+                    species.handle_action(
+                        models[i]
+                            .best_action(&CreatureState::new(&species, time_left, creature))
+                            .unwrap(),
+                        creature,
+                    )
+                }
+            }
+            world.finish_step();
+
+            if time_left <= 0 {
+                time_left = world.config.moon_len;
+                world.finish_moon();
+            }
         }
 
         // DRAW //
