@@ -65,10 +65,10 @@ impl Species {
         match action {
             CreatureAction::Move(x, y) => {
                 grid[members[index] + (x, y)] = grid[members[index]];
+                grid[members[index]] = Tile::Empty;
                 members[index] = members[index] + (x, y);
             }
             CreatureAction::Attack(x, y) => {
-                println!("get food");
                 grid[members[index] + (x, y)] = match grid[members[index] + (x, y)] {
                     Tile::Empty => Tile::Empty,
                     Tile::OutOfBounds => Tile::Empty,
@@ -99,19 +99,34 @@ impl Species {
                         "Expected creature at position {}. (Trying to give food from attack)",
                         members[index]
                     ),
-                }
+                };
             }
             CreatureAction::BuildWall(x, y) => {
                 grid[members[index] + (x, y)] = Tile::Wall {
                     species: match grid[members[0]] {
                         Tile::Creature { species, .. } => species,
                         _ => panic!(
-                            "Expected creature at position {}. (Trying to get species)",
-                            members[0]
+                            "Expected creature at position {}, got {:?}. (Trying to get species)",
+                            members[0], grid[members[0]]
                         ),
                     },
                     color: self.color,
-                }
+                };
+                grid[members[index]] = match grid[members[index]] {
+                    Tile::Creature {
+                        species,
+                        color,
+                        food,
+                    } => Tile::Creature {
+                        species,
+                        color,
+                        food: food - 1,
+                    },
+                    _ => panic!(
+                        "Expected creature at position {}. (Trying to take food from wall)",
+                        members[index]
+                    ),
+                };
             }
         }
     }

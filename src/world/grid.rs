@@ -141,8 +141,8 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
     ) -> [[Tile; SLICE_WIDTH]; SLICE_HEIGHT] {
         let mut slice = [[Tile::OutOfBounds; SLICE_WIDTH]; SLICE_HEIGHT];
         let (mx, my) = (
-            (x + SLICE_WIDTH).clamp(0, WIDTH),
-            (y + SLICE_HEIGHT).clamp(0, HEIGHT),
+            (x + SLICE_WIDTH).clamp(0, WIDTH - 1),
+            (y + SLICE_HEIGHT).clamp(0, HEIGHT - 1),
         );
 
         for (i, row) in self.arr[y..my].iter().enumerate() {
@@ -162,8 +162,8 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
         let (ox, oy) = ((-x).max(0) as usize, (-y).max(0) as usize);
         let (cx, cy) = (x.max(0) as usize, y.max(0) as usize);
         let (mx, my) = (
-            (x + SLICE_WIDTH as isize).clamp(0, WIDTH as isize) as usize,
-            (y + SLICE_HEIGHT as isize).clamp(0, HEIGHT as isize) as usize,
+            (x + SLICE_WIDTH as isize).clamp(0, WIDTH as isize - 1) as usize,
+            (y + SLICE_HEIGHT as isize).clamp(0, HEIGHT as isize - 1) as usize,
         );
 
         for (i, row) in self.arr[cy..my].iter().enumerate() {
@@ -214,7 +214,7 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
                             x as i32 * TILE_SIZE,
                             y as i32 * TILE_SIZE - 4,
                             6,
-                            Color::BLACK,
+                            Color::WHITE,
                         );
                     }
                 }

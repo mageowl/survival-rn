@@ -1,7 +1,7 @@
 use rurel::{
     dqn::DQNAgentTrainer,
     mdp::{Agent, State},
-    strategy::{explore::RandomExploration, terminate::FixedIterations},
+    strategy::explore::RandomExploration,
 };
 
 use crate::world::{
@@ -9,6 +9,9 @@ use crate::world::{
     species::Species,
     World,
 };
+use terminate::FixedIterations;
+
+mod terminate;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CreatureAction {
@@ -52,11 +55,11 @@ pub struct CreatureState {
 }
 
 impl CreatureState {
-    fn new(species: &Species, world: &World, index: usize) -> Self {
+    fn new(species: &Species, time_left: usize, index: usize) -> Self {
         Self {
             slice: species.get_view_slice(index),
             food: species.get_food(index),
-            time_left: world.time_left,
+            time_left,
         }
     }
 }
@@ -72,13 +75,17 @@ impl State for CreatureState {
         let mut actions = Vec::new();
 
         for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-            if let Tile::Empty = self.slice[Pos(3, 3) + direction] {
-                actions.push(CreatureAction::Move(direction.0, direction.1));
-                actions.push(CreatureAction::BuildWall(direction.0, direction.1));
-            }
-
-            if let Tile::Bush(true) | Tile::Creature { .. } = self.slice[Pos(3, 3) + direction] {
-                actions.push(CreatureAction::Attack(direction.0, direction.1));
+            match self.slice[Pos(3, 3) + direction] {
+                Tile::Empty => {
+                    actions.push(CreatureAction::Move(direction.0, direction.1));
+                    if self.food > 0 {
+                        actions.push(CreatureAction::BuildWall(direction.0, direction.1));
+                    }
+                }
+                Tile::Bush(true) | Tile::Creature { .. } | Tile::Wall { .. } => {
+                    actions.push(CreatureAction::Attack(direction.0, direction.1));
+                }
+                _ => (),
             }
         }
 
@@ -104,28 +111,30 @@ impl Into<[f32; 100]> for CreatureState {
 pub struct SpeciesAgent<'a> {
     state: CreatureState,
     species: &'a Species,
-    world: &'a World,
+    time_left: usize,
     creature_index: usize,
+    iters: usize,
 }
 
 impl<'a> SpeciesAgent<'a> {
-    pub fn new(species: &'a Species, world: &'a World) -> Self {
+    pub fn new(species: &'a Species) -> Self {
         Self {
-            state: CreatureState::new(&species, &world, 0),
+            state: CreatureState::new(&species, 0, 0),
             species,
-            world,
+            time_left: 0,
             creature_index: 0,
+            iters: 0,
         }
     }
 
     pub fn increment_index(&mut self) {
         self.creature_index += 1;
-        self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
+        self.state = CreatureState::new(&self.species, self.time_left, self.creature_index);
     }
 
     pub fn reset_index(&mut self) {
         self.creature_index = 0;
-        self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
+        self.state = CreatureState::new(&self.species, self.time_left, self.creature_index);
     }
 }
 
@@ -134,43 +143,59 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
         &self.state
     }
 
-    fn take_action(&mut self, action: &<CreatureState as State>::A) {
+    fn take_action(&mut self, action: &CreatureAction) {
+        println!("take action #{}", self.creature_index);
         self.species.handle_action(*action, self.creature_index);
-        self.increment_index();
+        if self.creature_index < self.iters - 1 {
+            self.increment_index();
+        }
     }
 }
 
-pub fn train_species(world: &mut World, num_moons: usize) {
-    let mut models: Vec<(
-        DQNAgentTrainer<CreatureState, 100, 3, 128>,
-        SpeciesAgent,
-        &Species,
-    )> = world
-        .species
-        .iter()
-        .map(|species| {
-            (
-                DQNAgentTrainer::<CreatureState, 100, 3, 128>::new(0.9, 1e-3),
-                SpeciesAgent::new(&species, &world),
+pub type SpeciesModel<'a> = (
+    DQNAgentTrainer<CreatureState, 100, 3, 128>,
+    SpeciesAgent<'a>,
+    &'a Species,
+);
+
+impl World {
+    pub fn train_moons(
+        &mut self,
+        num_moons: usize,
+    ) -> Vec<DQNAgentTrainer<CreatureState, 100, 3, 128>> {
+        let mut models: Vec<SpeciesModel> = Vec::new();
+        for species in &self.species {
+            models.push((
+                DQNAgentTrainer::new(0.9, 1e-3),
+                SpeciesAgent::new(&species),
                 species,
-            )
-        })
-        .collect();
-
-    for _moon in 0..num_moons {
-        for _step in 0..world.config.moon_len {
-            for (trainer, agent, species) in &mut models {
-                let iterations = (species.members.borrow().len() as isize - 2).max(0) as u32;
-
-                trainer.train(
-                    agent,
-                    &mut FixedIterations::new(iterations),
-                    &RandomExploration::new(),
-                );
-                agent.reset_index();
-            }
-
-            world.check_dead_creatures();
+            ));
         }
+
+        for moon in 0..num_moons {
+            for step in 0..self.config.moon_len {
+                for (trainer, agent, species) in &mut models {
+                    let iterations = species.members.borrow().len();
+                    if iterations == 0 {
+                        continue;
+                    }
+
+                    agent.time_left = self.config.moon_len - step;
+                    agent.iters = iterations;
+                    trainer.train(
+                        agent,
+                        &mut FixedIterations::new(iterations as u32),
+                        &RandomExploration::new(),
+                    );
+                    agent.reset_index();
+                }
+
+                self.finish_step();
+            }
+            self.finish_moon();
+            println!("Moon {moon}/{num_moons}")
+        }
+
+        models.into_iter().map(|(trainer, ..)| trainer).collect()
     }
 }

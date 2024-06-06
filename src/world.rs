@@ -98,24 +98,34 @@ impl World {
         self.species.push(species);
     }
 
-    pub fn check_dead_creatures(&self) {
+    pub fn finish_step(&self) {
         for species in &self.species {
             let mut creatures = species.members.borrow_mut();
 
             let mut indices = Vec::new();
+            let mut clear_pos = Vec::new();
             for (i, creature) in creatures.iter().enumerate() {
                 if let Tile::Creature { food, .. } = self.grid.borrow()[*creature] {
                     if food < 0 {
+                        clear_pos.push(*creature);
                         indices.push(i);
                     }
                 } else {
+                    clear_pos.push(*creature);
                     indices.push(i);
                 }
             }
 
+            indices.reverse();
             for i in indices {
                 creatures.remove(i);
             }
+
+            for pos in clear_pos {
+                self.grid.borrow_mut()[pos] = Tile::Empty;
+            }
         }
     }
+
+    pub fn finish_moon(&self) {}
 }

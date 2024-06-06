@@ -19,7 +19,7 @@ const VIEW_SIZE: (i32, i32) = (
     GRID_HEIGHT as i32 * TILE_SIZE * ZOOM as i32,
 );
 
-pub fn open_window(world: World) {
+pub fn run_simulation(world: World) {
     let (mut rl, thread) = raylib::init()
         .size(VIEW_SIZE.0, VIEW_SIZE.1)
         .title("Survival Sim")
@@ -34,14 +34,20 @@ pub fn open_window(world: World) {
         zoom: ZOOM,
     };
 
+    let mut time = 0.0;
     while !rl.window_should_close() {
         // UPDATE //
+        time += rl.get_frame_time();
+        if time >= 1.0 {
+            time = 0.0;
+        }
 
         // DRAW //
         let mut d = rl.begin_drawing(&thread);
         let mut d = d.begin_mode2D(camera);
 
         d.clear_background(Color::TAN);
+
         world.grid.borrow().render(&mut d, &assets);
     }
 }
