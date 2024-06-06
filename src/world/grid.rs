@@ -6,7 +6,7 @@ use std::{
 
 use raylib::{color::Color, drawing::RaylibDraw};
 
-use crate::{assets::Assets, util::TILE_SIZE};
+use crate::{render::assets::Assets, util::TILE_SIZE};
 
 #[derive(Clone, Copy)]
 pub struct Pos(pub usize, pub usize);
@@ -191,7 +191,14 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
                         y as i32 * TILE_SIZE,
                         Color::WHITE,
                     ),
-                    Tile::Wall { .. } => todo!(),
+                    Tile::Wall { color, .. } => {
+                        d.draw_texture(
+                            &assets.wall,
+                            x as i32 * TILE_SIZE,
+                            y as i32 * TILE_SIZE,
+                            color,
+                        );
+                    }
                     Tile::Creature { color, food, .. } => {
                         d.draw_texture(
                             &assets.agent,
@@ -205,7 +212,7 @@ impl<const WIDTH: usize, const HEIGHT: usize> Grid<WIDTH, HEIGHT> {
                             y as i32 * TILE_SIZE - 4,
                             6,
                             Color::BLACK,
-                        )
+                        );
                     }
                 }
             }

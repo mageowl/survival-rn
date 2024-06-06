@@ -6,11 +6,11 @@ use rurel::{
 
 use crate::world::{
     grid::{Grid, Pos, Tile},
-    species::{self, Species},
+    species::Species,
     World,
 };
 
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CreatureAction {
     Move(i8, i8),
     Attack(i8, i8),
@@ -74,7 +74,9 @@ impl State for CreatureState {
         for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
             if let Tile::Empty = self.slice[Pos(4, 4) + direction] {
                 actions.push(CreatureAction::Move(direction.0, direction.1));
+                // if self.food > 0 {
                 actions.push(CreatureAction::BuildWall(direction.0, direction.1));
+                // }
             }
 
             if let Tile::Bush(true) | Tile::Creature { .. } = self.slice[Pos(4, 4) + direction] {
@@ -119,6 +121,7 @@ impl<'a> SpeciesAgent<'a> {
     }
 
     pub fn increment_index(&mut self) {
+        println!("trained 1 creature");
         self.creature_index += 1;
         self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
     }
@@ -135,6 +138,7 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
     }
 
     fn take_action(&mut self, action: &<CreatureState as State>::A) {
+        dbg!(&action);
         self.species.handle_action(*action, self.creature_index);
         self.increment_index();
     }
@@ -162,7 +166,7 @@ pub fn train_species(world: &mut World, num_moons: usize) {
             for (trainer, agent, species) in &mut models {
                 trainer.train(
                     agent,
-                    &mut FixedIterations::new(species.members.len() as u32),
+                    &mut FixedIterations::new((species.members.len() as isize - 2).max(0) as u32),
                     &RandomExploration::new(),
                 );
                 agent.reset_index();

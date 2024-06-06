@@ -50,6 +50,7 @@ impl Species {
         if let Tile::Creature { food, .. } = self.grid.borrow()[self.members[index]] {
             food
         } else {
+            println!("{:?}", self.grid.borrow()[self.members[index]]);
             panic!(
                 "Expected creature at position {}. (Trying to access amount of food)",
                 self.members[index]
@@ -57,60 +58,55 @@ impl Species {
         }
     }
 
-    pub fn get_species_idx(&self) -> usize {
-        match self.grid.borrow()[self.members[0]] {
-            Tile::Creature { species, .. } => species,
-            _ => panic!(
-                "Expected creature at position {}. (Trying to get species)",
-                self.members[0]
-            ),
-        }
-    }
-
     pub fn handle_action(&self, action: CreatureAction, index: usize) {
+        let mut grid = self.grid.borrow_mut();
         match action {
             CreatureAction::Move(x, y) => {
-                self.grid.borrow_mut()[self.members[index] + (x, y)] =
-                    self.grid.borrow()[self.members[index]];
+                grid[self.members[index] + (x, y)] = grid[self.members[index]];
             }
             CreatureAction::Attack(x, y) => {
-                self.grid.borrow_mut()[self.members[index] + (x, y)] =
-                    match self.grid.borrow()[self.members[index] + (x, y)] {
-                        Tile::Empty => Tile::Empty,
-                        Tile::OutOfBounds => Tile::Empty,
-                        Tile::Bush(true) => Tile::Bush(false),
-                        Tile::Bush(false) => Tile::Empty,
-                        Tile::Wall { .. } => Tile::Empty,
-                        Tile::Creature {
-                            species,
-                            color,
-                            food,
-                        } => Tile::Creature {
-                            species,
-                            color,
-                            food: food - 1,
-                        },
-                    };
-                self.grid.borrow_mut()[self.members[index]] =
-                    match self.grid.borrow()[self.members[index]] {
-                        Tile::Creature {
-                            species,
-                            color,
-                            food,
-                        } => Tile::Creature {
-                            species,
-                            color,
-                            food: food + 1,
-                        },
-                        _ => panic!(
-                            "Expected creature at position {}. (Trying to give food from attack)",
-                            self.members[index]
-                        ),
-                    }
+                grid[self.members[index] + (x, y)] = match grid[self.members[index] + (x, y)] {
+                    Tile::Empty => Tile::Empty,
+                    Tile::OutOfBounds => Tile::Empty,
+                    Tile::Bush(true) => Tile::Bush(false),
+                    Tile::Bush(false) => Tile::Empty,
+                    Tile::Wall { .. } => Tile::Empty,
+                    Tile::Creature {
+                        species,
+                        color,
+                        food,
+                    } => Tile::Creature {
+                        species,
+                        color,
+                        food: food - 1,
+                    },
+                };
+                grid[self.members[index]] = match grid[self.members[index]] {
+                    Tile::Creature {
+                        species,
+                        color,
+                        food,
+                    } => Tile::Creature {
+                        species,
+                        color,
+                        food: food + 1,
+                    },
+                    _ => panic!(
+                        "Expected creature at position {}. (Trying to give food from attack)",
+                        self.members[index]
+                    ),
+                }
             }
             CreatureAction::BuildWall(x, y) => {
-                self.grid.borrow_mut()[self.members[index] + (x, y)] = Tile::Wall {
-                    species: self.get_species_idx(),
+                println!("{}", &self.members[index]);
+                grid[self.members[index] + (x, y)] = Tile::Wall {
+                    species: match grid[self.members[index]] {
+                        Tile::Creature { species, .. } => species,
+                        _ => panic!(
+                            "Expected creature at position {}. (Trying to get species)",
+                            self.members[index]
+                        ),
+                    },
                     color: self.color,
                 }
             }
