@@ -104,10 +104,11 @@ impl World {
 
             let mut indices = Vec::new();
             for (i, creature) in creatures.iter().enumerate() {
-                if let Tile::Creature { .. } = self.grid.borrow()[*creature] {
-                    ()
+                if let Tile::Creature { food, .. } = self.grid.borrow()[*creature] {
+                    if food < 0 {
+                        indices.push(i);
+                    }
                 } else {
-                    println!("some1 died");
                     indices.push(i);
                 }
             }

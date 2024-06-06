@@ -23,6 +23,9 @@ impl Add<(i8, i8)> for Pos {
     type Output = Pos;
 
     fn add(self, rhs: (i8, i8)) -> Self::Output {
+        if (rhs.0 < 0 && self.0 == 0) || (rhs.1 < 0 && self.1 == 0) {
+            panic!("Cannot add under 0");
+        }
         Pos(
             (self.0 as isize + rhs.0 as isize) as usize,
             (self.1 as isize + rhs.1 as isize) as usize,
@@ -85,7 +88,7 @@ pub enum Tile {
     Creature {
         species: usize,
         color: Color,
-        food: usize,
+        food: isize,
     },
 }
 

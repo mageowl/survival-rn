@@ -46,7 +46,7 @@ pub struct CreatureState {
     /// 7x7 grid centered on creature.
     slice: Grid<7, 7>,
     /// Amount of food that the creature has.
-    food: usize,
+    food: isize,
     /// How much time is left until the moon ends. (and it has to eat)
     time_left: usize,
 }
@@ -72,14 +72,12 @@ impl State for CreatureState {
         let mut actions = Vec::new();
 
         for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-            if let Tile::Empty = self.slice[Pos(4, 4) + direction] {
+            if let Tile::Empty = self.slice[Pos(3, 3) + direction] {
                 actions.push(CreatureAction::Move(direction.0, direction.1));
-                // if self.food > 0 {
                 actions.push(CreatureAction::BuildWall(direction.0, direction.1));
-                // }
             }
 
-            if let Tile::Bush(true) | Tile::Creature { .. } = self.slice[Pos(4, 4) + direction] {
+            if let Tile::Bush(true) | Tile::Creature { .. } = self.slice[Pos(3, 3) + direction] {
                 actions.push(CreatureAction::Attack(direction.0, direction.1));
             }
         }

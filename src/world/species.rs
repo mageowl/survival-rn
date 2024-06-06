@@ -46,7 +46,7 @@ impl Species {
         .into()
     }
 
-    pub fn get_food(&self, index: usize) -> usize {
+    pub fn get_food(&self, index: usize) -> isize {
         if let Tile::Creature { food, .. } = self.grid.borrow()[self.members.borrow()[index]] {
             food
         } else {
@@ -68,6 +68,7 @@ impl Species {
                 members[index] = members[index] + (x, y);
             }
             CreatureAction::Attack(x, y) => {
+                println!("get food");
                 grid[members[index] + (x, y)] = match grid[members[index] + (x, y)] {
                     Tile::Empty => Tile::Empty,
                     Tile::OutOfBounds => Tile::Empty,
@@ -78,18 +79,11 @@ impl Species {
                         species,
                         color,
                         food,
-                    } => {
-                        println!("{}", food);
-                        if food > 0 {
-                            Tile::Creature {
-                                species,
-                                color,
-                                food: food - 1,
-                            }
-                        } else {
-                            Tile::Empty
-                        }
-                    }
+                    } => Tile::Creature {
+                        species,
+                        color,
+                        food: food - 1,
+                    },
                 };
                 grid[members[index]] = match grid[members[index]] {
                     Tile::Creature {
