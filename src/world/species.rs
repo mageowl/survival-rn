@@ -20,7 +20,7 @@ pub struct SpeciesConfig {
 
 pub struct Species {
     pub id: usize,
-    pub members: Vec<Pos>,
+    pub members: RefCell<Vec<Pos>>,
     pub color: Color,
     grid: Rc<RefCell<Grid<GRID_WIDTH, GRID_HEIGHT>>>,
 }
@@ -29,14 +29,14 @@ impl Species {
     pub fn new(id: usize, world: &World, color: Color) -> Self {
         Self {
             id,
-            members: Vec::new(),
+            members: RefCell::new(Vec::new()),
             grid: world.grid.clone(),
             color,
         }
     }
 
     pub fn get_view_slice(&self, index: usize) -> Grid<7, 7> {
-        let i_pos: IPos = Into::<IPos>::into(self.members[index]) - IPos(3, 3);
+        let i_pos: IPos = Into::<IPos>::into(self.members.borrow()[index]) - IPos(3, 3);
 
         if let Ok(pos) = i_pos.try_into() {
             self.grid.borrow().slice(pos)
@@ -47,25 +47,28 @@ impl Species {
     }
 
     pub fn get_food(&self, index: usize) -> usize {
-        if let Tile::Creature { food, .. } = self.grid.borrow()[self.members[index]] {
+        if let Tile::Creature { food, .. } = self.grid.borrow()[self.members.borrow()[index]] {
             food
         } else {
-            println!("{:?}", self.grid.borrow()[self.members[index]]);
+            println!("{:?}", self.grid.borrow()[self.members.borrow()[index]]);
             panic!(
                 "Expected creature at position {}. (Trying to access amount of food)",
-                self.members[index]
+                self.members.borrow()[index]
             );
         }
     }
 
     pub fn handle_action(&self, action: CreatureAction, index: usize) {
         let mut grid = self.grid.borrow_mut();
+        let mut members = self.members.borrow_mut();
+
         match action {
             CreatureAction::Move(x, y) => {
-                grid[self.members[index] + (x, y)] = grid[self.members[index]];
+                grid[members[index] + (x, y)] = grid[members[index]];
+                members[index] = members[index] + (x, y);
             }
             CreatureAction::Attack(x, y) => {
-                grid[self.members[index] + (x, y)] = match grid[self.members[index] + (x, y)] {
+                grid[members[index] + (x, y)] = match grid[members[index] + (x, y)] {
                     Tile::Empty => Tile::Empty,
                     Tile::OutOfBounds => Tile::Empty,
                     Tile::Bush(true) => Tile::Bush(false),
@@ -81,7 +84,7 @@ impl Species {
                         food: food - 1,
                     },
                 };
-                grid[self.members[index]] = match grid[self.members[index]] {
+                grid[members[index]] = match grid[members[index]] {
                     Tile::Creature {
                         species,
                         color,
@@ -93,18 +96,17 @@ impl Species {
                     },
                     _ => panic!(
                         "Expected creature at position {}. (Trying to give food from attack)",
-                        self.members[index]
+                        members[index]
                     ),
                 }
             }
             CreatureAction::BuildWall(x, y) => {
-                println!("{}", &self.members[index]);
-                grid[self.members[index] + (x, y)] = Tile::Wall {
-                    species: match grid[self.members[index]] {
+                grid[members[index] + (x, y)] = Tile::Wall {
+                    species: match grid[members[0]] {
                         Tile::Creature { species, .. } => species,
                         _ => panic!(
                             "Expected creature at position {}. (Trying to get species)",
-                            self.members[index]
+                            members[0]
                         ),
                     },
                     color: self.color,

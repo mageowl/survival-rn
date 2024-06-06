@@ -121,7 +121,6 @@ impl<'a> SpeciesAgent<'a> {
     }
 
     pub fn increment_index(&mut self) {
-        println!("trained 1 creature");
         self.creature_index += 1;
         self.state = CreatureState::new(&self.species, &self.world, self.creature_index);
     }
@@ -138,7 +137,6 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
     }
 
     fn take_action(&mut self, action: &<CreatureState as State>::A) {
-        dbg!(&action);
         self.species.handle_action(*action, self.creature_index);
         self.increment_index();
     }
@@ -164,13 +162,14 @@ pub fn train_species(world: &mut World, num_moons: usize) {
     for _moon in 0..num_moons {
         for _step in 0..world.config.moon_len {
             for (trainer, agent, species) in &mut models {
+                let iterations = (species.members.borrow().len() as isize - 2).max(0) as u32;
+
                 trainer.train(
                     agent,
-                    &mut FixedIterations::new((species.members.len() as isize - 2).max(0) as u32),
+                    &mut FixedIterations::new(iterations),
                     &RandomExploration::new(),
                 );
                 agent.reset_index();
-                println!("trained species once")
             }
         }
     }

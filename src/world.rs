@@ -54,7 +54,7 @@ impl World {
     }
 
     pub fn add_species(&mut self, config: SpeciesConfig) {
-        let mut species = Species::new(self.species.len(), &self, config.color);
+        let species = Species::new(self.species.len(), &self, config.color);
 
         for _ in 0..config.num_packs {
             let mut pos;
@@ -91,7 +91,7 @@ impl World {
                     color: species.color,
                     food: 0,
                 };
-                species.members.push(pos + offset);
+                species.members.borrow_mut().push(pos + offset);
             }
         }
 
