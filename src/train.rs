@@ -21,30 +21,45 @@ pub enum CreatureAction {
     DoNothing,
 }
 
-impl Into<[f32; 3]> for CreatureAction {
-    fn into(self) -> [f32; 3] {
-        match self {
-            CreatureAction::Move(x, y) => [0.0, x as f32, y as f32],
-            CreatureAction::Attack(x, y) => [1.0 / 3.0, x as f32, y as f32],
-            CreatureAction::BuildWall(x, y) => [2.0 / 3.0, x as f32, y as f32],
-            CreatureAction::DoNothing => [1.0, 0.0, 0.0],
-        }
+// impl Into<[f32; 3]> for CreatureAction {
+//     fn into(self) -> [f32; 3] {
+//         match self {
+//             CreatureAction::Move(x, y) => [0.0, x as f32, y as f32],
+//             CreatureAction::Attack(x, y) => [1.0 / 3.0, x as f32, y as f32],
+//             CreatureAction::BuildWall(x, y) => [2.0 / 3.0, x as f32, y as f32],
+//             CreatureAction::DoNothing => [1.0, 0.0, 0.0],
+//         }
+//     }
+// }
+
+// impl From<[f32; 3]> for CreatureAction {
+//     fn from(arr: [f32; 3]) -> Self {
+//         if arr[0] == 0.0 {
+//             Self::Move(arr[1] as i8, arr[2] as i8)
+//         } else if arr[0] == 1.0 / 3.0 {
+//             Self::Attack(arr[1] as i8, arr[2] as i8)
+//         } else if arr[0] == 2.0 / 3.0 {
+//             Self::BuildWall(arr[1] as i8, arr[2] as i8)
+//         } else if arr[0] == 1.0 {
+//             Self::DoNothing
+//         } else {
+//             panic!("Unknown action {arr:?}")
+//         }
+//     }
+// }
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub struct ActionIndex(pub usize);
+
+impl Into<[f32; 1]> for ActionIndex {
+    fn into(self) -> [f32; 1] {
+        [self.0 as f32]
     }
 }
 
-impl From<[f32; 3]> for CreatureAction {
-    fn from(arr: [f32; 3]) -> Self {
-        if arr[0] == 0.0 {
-            Self::Move(arr[1] as i8, arr[2] as i8)
-        } else if arr[0] == 1.0 / 3.0 {
-            Self::Attack(arr[1] as i8, arr[2] as i8)
-        } else if arr[0] == 2.0 / 3.0 {
-            Self::BuildWall(arr[1] as i8, arr[2] as i8)
-        } else if arr[0] == 1.0 {
-            Self::DoNothing
-        } else {
-            panic!("Unknown action {arr:?}")
-        }
+impl From<[f32; 1]> for ActionIndex {
+    fn from(value: [f32; 1]) -> Self {
+        Self(value[0].round() as usize)
     }
 }
 
@@ -55,27 +70,19 @@ pub struct CreatureState {
     /// Amount of food that the creature has.
     food: isize,
     /// How much time is left until the moon ends. (and it has to eat)
-    time_left: usize,
+    time: usize,
 }
 
 impl CreatureState {
-    pub fn new(species: &Species, time_left: usize, index: usize) -> Self {
+    pub fn new(species: &Species, time: usize, index: usize) -> Self {
         Self {
             slice: species.get_view_slice(index),
             food: species.get_food(index),
-            time_left,
+            time,
         }
     }
-}
 
-impl State for CreatureState {
-    type A = CreatureAction;
-
-    fn reward(&self) -> f64 {
-        (2 - self.food) as f64 * -(self.time_left as f64)
-    }
-
-    fn actions(&self) -> Vec<Self::A> {
+    pub fn creature_actions(&self) -> Vec<CreatureAction> {
         let mut actions = Vec::new();
 
         for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
@@ -101,6 +108,20 @@ impl State for CreatureState {
     }
 }
 
+impl State for CreatureState {
+    type A = ActionIndex;
+
+    fn reward(&self) -> f64 {
+        (2 - self.food) as f64 * -(self.time as f64)
+    }
+
+    fn actions(&self) -> Vec<Self::A> {
+        (0..self.creature_actions().len())
+            .map(|i| ActionIndex(i))
+            .collect()
+    }
+}
+
 impl Into<[f32; 100]> for CreatureState {
     fn into(self) -> [f32; 100] {
         let mut vec = Vec::new();
@@ -110,7 +131,7 @@ impl Into<[f32; 100]> for CreatureState {
         }
 
         vec.push(self.food as f32);
-        vec.push(self.time_left as f32);
+        vec.push(self.time as f32);
 
         vec.try_into().expect("too many tiles in grid")
     }
@@ -119,7 +140,7 @@ impl Into<[f32; 100]> for CreatureState {
 pub struct SpeciesAgent<'a> {
     state: CreatureState,
     species: &'a Species,
-    time_left: usize,
+    time: usize,
     creature_index: usize,
     iters: usize,
 }
@@ -129,7 +150,7 @@ impl<'a> SpeciesAgent<'a> {
         Self {
             state: CreatureState::new(&species, 0, 0),
             species,
-            time_left: 0,
+            time: 0,
             creature_index: 0,
             iters: 0,
         }
@@ -137,12 +158,12 @@ impl<'a> SpeciesAgent<'a> {
 
     pub fn increment_index(&mut self) {
         self.creature_index += 1;
-        self.state = CreatureState::new(&self.species, self.time_left, self.creature_index);
+        self.state = CreatureState::new(&self.species, self.time, self.creature_index);
     }
 
     pub fn reset_index(&mut self) {
         self.creature_index = 0;
-        self.state = CreatureState::new(&self.species, self.time_left, self.creature_index);
+        self.state = CreatureState::new(&self.species, self.time, self.creature_index);
     }
 }
 
@@ -151,8 +172,9 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
         &self.state
     }
 
-    fn take_action(&mut self, action: &CreatureAction) {
-        self.species.handle_action(*action, self.creature_index);
+    fn take_action(&mut self, action: &ActionIndex) {
+        self.species
+            .handle_action(self.state.creature_actions()[action.0], self.creature_index);
         if self.creature_index < self.iters - 1 {
             self.increment_index();
         }
@@ -171,7 +193,7 @@ impl SimConfig {
     }
 }
 
-pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 3, 128>;
+pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 1, 128>;
 
 pub fn train_moons(world: &mut World, models: &mut Vec<SpeciesModel>, num_moons: usize) {
     let mut species_data = Vec::new();
@@ -188,7 +210,7 @@ pub fn train_moons(world: &mut World, models: &mut Vec<SpeciesModel>, num_moons:
                 }
 
                 agent.reset_index();
-                agent.time_left = world.config.moon_len - step;
+                agent.time = step;
                 agent.iters = iterations;
 
                 trainer.train(
