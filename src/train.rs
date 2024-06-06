@@ -25,9 +25,9 @@ impl Into<[f32; 3]> for CreatureAction {
     fn into(self) -> [f32; 3] {
         match self {
             CreatureAction::Move(x, y) => [0.0, x as f32, y as f32],
-            CreatureAction::Attack(x, y) => [0.5, x as f32, y as f32],
-            CreatureAction::BuildWall(x, y) => [1.0, x as f32, y as f32],
-            CreatureAction::DoNothing => [-1.0, 0.0, 0.0],
+            CreatureAction::Attack(x, y) => [1.0 / 3.0, x as f32, y as f32],
+            CreatureAction::BuildWall(x, y) => [2.0 / 3.0, x as f32, y as f32],
+            CreatureAction::DoNothing => [1.0, 0.0, 0.0],
         }
     }
 }
@@ -36,11 +36,11 @@ impl From<[f32; 3]> for CreatureAction {
     fn from(arr: [f32; 3]) -> Self {
         if arr[0] == 0.0 {
             Self::Move(arr[1] as i8, arr[2] as i8)
-        } else if arr[0] == 0.5 {
+        } else if arr[0] == 1.0 / 3.0 {
             Self::Attack(arr[1] as i8, arr[2] as i8)
-        } else if arr[0] == 1.0 {
+        } else if arr[0] == 2.0 / 3.0 {
             Self::BuildWall(arr[1] as i8, arr[2] as i8)
-        } else if arr[0] == -1.0 {
+        } else if arr[0] == 1.0 {
             Self::DoNothing
         } else {
             panic!("Unknown action {arr:?}")
