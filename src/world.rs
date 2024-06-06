@@ -97,4 +97,24 @@ impl World {
 
         self.species.push(species);
     }
+
+    pub fn check_dead_creatures(&self) {
+        for species in &self.species {
+            let mut creatures = species.members.borrow_mut();
+
+            let mut indices = Vec::new();
+            for (i, creature) in creatures.iter().enumerate() {
+                if let Tile::Creature { .. } = self.grid.borrow()[*creature] {
+                    ()
+                } else {
+                    println!("some1 died");
+                    indices.push(i);
+                }
+            }
+
+            for i in indices {
+                creatures.remove(i);
+            }
+        }
+    }
 }

@@ -78,11 +78,18 @@ impl Species {
                         species,
                         color,
                         food,
-                    } => Tile::Creature {
-                        species,
-                        color,
-                        food: food - 1,
-                    },
+                    } => {
+                        println!("{}", food);
+                        if food > 0 {
+                            Tile::Creature {
+                                species,
+                                color,
+                                food: food - 1,
+                            }
+                        } else {
+                            Tile::Empty
+                        }
+                    }
                 };
                 grid[members[index]] = match grid[members[index]] {
                     Tile::Creature {

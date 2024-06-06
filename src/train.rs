@@ -171,6 +171,8 @@ pub fn train_species(world: &mut World, num_moons: usize) {
                 );
                 agent.reset_index();
             }
+
+            world.check_dead_creatures();
         }
     }
 }
