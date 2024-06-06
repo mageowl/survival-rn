@@ -217,7 +217,9 @@ pub fn train_iters(config: SimConfig, num_iters: usize, num_moons: usize) -> Vec
     for i in 0..num_iters {
         let mut world = World::new(config);
 
+        let prev_weights = models[0].learned_values().0 .0.weight.as_vec();
         train_moons(&mut world, &mut models, num_moons);
+        dbg!(&models[0].learned_values().0 .0.weight.as_vec() == &prev_weights);
 
         println!("# Epoch {}/{num_iters} complete.\n", i + 1)
     }
