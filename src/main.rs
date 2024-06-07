@@ -29,7 +29,7 @@ const CONFIG: SimConfig = SimConfig {
 };
 
 fn main() {
-    let models = train_iters(CONFIG, 100, 10);
+    let models = train_iters(CONFIG, 300, 10);
 
     println!("Press ENTER to start simulation.");
     let mut buf = String::new();

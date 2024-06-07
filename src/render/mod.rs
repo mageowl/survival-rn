@@ -5,12 +5,10 @@ use raylib::{
     ffi::TraceLogLevel,
     math::Vector2,
 };
-use rurel::{mdp::State, strategy::explore::RandomExploration};
+use rurel::strategy::explore::RandomExploration;
 
 use crate::{
-    train::{
-        terminate::FixedIterations, CreatureState, OneHotEncodedAction, SpeciesAgent, SpeciesModel,
-    },
+    train::{terminate::FixedIterations, SpeciesAgent, SpeciesModel},
     util::{GRID_HEIGHT, GRID_WIDTH, TILE_SIZE},
     world::World,
 };

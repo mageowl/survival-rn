@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use rurel::{
     dqn::DQNAgentTrainer,
     mdp::{Agent, State},
@@ -258,10 +260,16 @@ pub fn train_iters(config: SimConfig, num_iters: usize, num_moons: usize) -> Vec
 
     for i in 0..num_iters {
         let mut world = World::new(config);
+        let now = Instant::now();
 
         train_moons(&mut world, &mut models, num_moons);
 
-        println!("# Epoch {}/{num_iters} complete.\n", i + 1)
+        println!(
+            "# Epoch {}/{num_iters} completed in {} seconds.\n",
+            i + 1,
+            now.elapsed().as_secs() as f64
+                + (now.elapsed().subsec_millis() as f64 / 100.0).round() / 10.0,
+        )
     }
 
     models
