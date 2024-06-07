@@ -48,10 +48,7 @@ pub fn run_simulation(world: &mut World, models: Vec<SpeciesModel>) {
                 species.members.borrow_mut();
                 for creature in 0..num_creatures {
                     let state = CreatureState::new(&species, time_left, creature);
-                    species.handle_action(
-                        state.creature_actions()[models[i].best_action(&state).unwrap().0],
-                        creature,
-                    )
+                    species.handle_action(models[i].best_action(&state).unwrap(), creature)
                 }
             }
             world.finish_step();

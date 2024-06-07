@@ -21,45 +21,45 @@ pub enum CreatureAction {
     DoNothing,
 }
 
-// impl Into<[f32; 3]> for CreatureAction {
-//     fn into(self) -> [f32; 3] {
-//         match self {
-//             CreatureAction::Move(x, y) => [0.0, x as f32, y as f32],
-//             CreatureAction::Attack(x, y) => [1.0 / 3.0, x as f32, y as f32],
-//             CreatureAction::BuildWall(x, y) => [2.0 / 3.0, x as f32, y as f32],
-//             CreatureAction::DoNothing => [1.0, 0.0, 0.0],
-//         }
-//     }
-// }
+impl CreatureAction {
+    const DIRECTIONS: [(i8, i8); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
+    const POSSIBLE_VALUES: [Self; 12] = [
+        Self::Move(1, 0),
+        Self::Move(-1, 0),
+        Self::Move(0, 1),
+        Self::Move(0, -1),
+        Self::Attack(1, 0),
+        Self::Attack(-1, 0),
+        Self::Attack(0, 1),
+        Self::Attack(0, -1),
+        Self::BuildWall(1, 0),
+        Self::BuildWall(-1, 0),
+        Self::BuildWall(0, 1),
+        Self::BuildWall(0, -1),
+    ];
+}
 
-// impl From<[f32; 3]> for CreatureAction {
-//     fn from(arr: [f32; 3]) -> Self {
-//         if arr[0] == 0.0 {
-//             Self::Move(arr[1] as i8, arr[2] as i8)
-//         } else if arr[0] == 1.0 / 3.0 {
-//             Self::Attack(arr[1] as i8, arr[2] as i8)
-//         } else if arr[0] == 2.0 / 3.0 {
-//             Self::BuildWall(arr[1] as i8, arr[2] as i8)
-//         } else if arr[0] == 1.0 {
-//             Self::DoNothing
-//         } else {
-//             panic!("Unknown action {arr:?}")
-//         }
-//     }
-// }
-
-#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
-pub struct ActionIndex(pub usize);
-
-impl Into<[f32; 1]> for ActionIndex {
-    fn into(self) -> [f32; 1] {
-        [self.0 as f32]
+impl Into<[f32; 12]> for CreatureAction {
+    fn into(self) -> [f32; 12] {
+        Self::POSSIBLE_VALUES.map(|v| if v == self { 1.0 } else { 0.0 })
     }
 }
 
-impl From<[f32; 1]> for ActionIndex {
-    fn from(value: [f32; 1]) -> Self {
-        Self(value[0].round() as usize)
+impl From<[f32; 12]> for CreatureAction {
+    fn from(arr: [f32; 12]) -> Self {
+        let one_hot = arr.map(|v| v.clamp(0.0, 1.0));
+
+        let mut largest_action = CreatureAction::DoNothing;
+        let mut largest_confidence = 0.0;
+        for (i, confidence) in one_hot.into_iter().enumerate() {
+            println!("{}", confidence);
+            if confidence > largest_confidence {
+                largest_action = Self::POSSIBLE_VALUES[i];
+                largest_confidence = confidence;
+            }
+        }
+
+        largest_action
     }
 }
 
@@ -81,11 +81,19 @@ impl CreatureState {
             time,
         }
     }
+}
 
-    pub fn creature_actions(&self) -> Vec<CreatureAction> {
+impl State for CreatureState {
+    type A = CreatureAction;
+
+    fn reward(&self) -> f64 {
+        (2 - self.food) as f64 * -(self.time as f64) * 1000.0
+    }
+
+    fn actions(&self) -> Vec<Self::A> {
         let mut actions = Vec::new();
 
-        for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+        for direction in CreatureAction::DIRECTIONS {
             match self.slice[Pos(3, 3) + direction] {
                 Tile::Empty => {
                     actions.push(CreatureAction::Move(direction.0, direction.1));
@@ -105,20 +113,6 @@ impl CreatureState {
         }
 
         actions
-    }
-}
-
-impl State for CreatureState {
-    type A = ActionIndex;
-
-    fn reward(&self) -> f64 {
-        (2 - self.food) as f64 * -(self.time as f64)
-    }
-
-    fn actions(&self) -> Vec<Self::A> {
-        (0..self.creature_actions().len())
-            .map(|i| ActionIndex(i))
-            .collect()
     }
 }
 
@@ -172,9 +166,8 @@ impl<'a> Agent<CreatureState> for SpeciesAgent<'a> {
         &self.state
     }
 
-    fn take_action(&mut self, action: &ActionIndex) {
-        self.species
-            .handle_action(self.state.creature_actions()[action.0], self.creature_index);
+    fn take_action(&mut self, action: &CreatureAction) {
+        self.species.handle_action(*action, self.creature_index);
         if self.creature_index < self.iters - 1 {
             self.increment_index();
         }
@@ -193,7 +186,7 @@ impl SimConfig {
     }
 }
 
-pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 1, 128>;
+pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 12, 128>;
 
 pub fn train_moons(world: &mut World, models: &mut Vec<SpeciesModel>, num_moons: usize) {
     let mut species_data = Vec::new();
@@ -239,9 +232,7 @@ pub fn train_iters(config: SimConfig, num_iters: usize, num_moons: usize) -> Vec
     for i in 0..num_iters {
         let mut world = World::new(config);
 
-        let prev_weights = models[0].learned_values().0 .0.weight.as_vec();
         train_moons(&mut world, &mut models, num_moons);
-        dbg!(&models[0].learned_values().0 .0.weight.as_vec() == &prev_weights);
 
         println!("# Epoch {}/{num_iters} complete.\n", i + 1)
     }
