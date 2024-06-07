@@ -1,5 +1,3 @@
-use std::arch::x86_64;
-
 use rurel::{
     dqn::DQNAgentTrainer,
     mdp::{Agent, State},
@@ -13,7 +11,7 @@ use crate::world::{
 };
 use terminate::FixedIterations;
 
-mod terminate;
+pub mod terminate;
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum CreatureAction {
@@ -163,9 +161,9 @@ impl Into<[f32; 100]> for CreatureState {
 pub struct SpeciesAgent<'a> {
     state: CreatureState,
     species: &'a Species,
-    time: usize,
+    pub time: usize,
     creature_index: usize,
-    iters: usize,
+    pub iters: usize,
 }
 
 impl<'a> SpeciesAgent<'a> {
