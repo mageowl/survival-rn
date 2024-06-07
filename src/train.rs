@@ -1,3 +1,5 @@
+use std::arch::x86_64;
+
 use rurel::{
     dqn::DQNAgentTrainer,
     mdp::{Agent, State},
@@ -23,43 +25,70 @@ pub enum CreatureAction {
 
 impl CreatureAction {
     const DIRECTIONS: [(i8, i8); 4] = [(1, 0), (-1, 0), (0, 1), (0, -1)];
-    const POSSIBLE_VALUES: [Self; 12] = [
-        Self::Move(1, 0),
-        Self::Move(-1, 0),
-        Self::Move(0, 1),
-        Self::Move(0, -1),
-        Self::Attack(1, 0),
-        Self::Attack(-1, 0),
-        Self::Attack(0, 1),
-        Self::Attack(0, -1),
-        Self::BuildWall(1, 0),
-        Self::BuildWall(-1, 0),
-        Self::BuildWall(0, 1),
-        Self::BuildWall(0, -1),
-    ];
 }
 
-impl Into<[f32; 12]> for CreatureAction {
-    fn into(self) -> [f32; 12] {
-        Self::POSSIBLE_VALUES.map(|v| if v == self { 1.0 } else { 0.0 })
+impl Into<[f32; 4]> for CreatureAction {
+    fn into(self) -> [f32; 4] {
+        match self {
+            CreatureAction::Move(x, y) => {
+                Self::DIRECTIONS.map(|(x1, y1)| if x1 == x && y1 == y { 1.0 } else { 0.0 })
+            }
+            CreatureAction::Attack(x, y) => {
+                Self::DIRECTIONS.map(|(x1, y1)| if x1 == x && y1 == y { 1.0 } else { 0.0 })
+            }
+            CreatureAction::BuildWall(_, _) => todo!(),
+            CreatureAction::DoNothing => [0.0, 0.0, 0.0, 0.0],
+        }
     }
 }
 
-impl From<[f32; 12]> for CreatureAction {
-    fn from(arr: [f32; 12]) -> Self {
+impl From<[f32; 4]> for CreatureAction {
+    fn from(arr: [f32; 4]) -> Self {
         let one_hot = arr.map(|v| v.clamp(0.0, 1.0));
 
-        let mut largest_action = CreatureAction::DoNothing;
+        let mut largest_action = (0, 0);
         let mut largest_confidence = 0.0;
         for (i, confidence) in one_hot.into_iter().enumerate() {
-            println!("{}", confidence);
             if confidence > largest_confidence {
-                largest_action = Self::POSSIBLE_VALUES[i];
+                largest_action = Self::DIRECTIONS[i];
                 largest_confidence = confidence;
             }
         }
 
-        largest_action
+        if largest_action == (0, 0) {
+            CreatureAction::DoNothing
+        } else {
+            CreatureAction::Move(largest_action.0, largest_action.1)
+        }
+    }
+}
+
+pub trait OneHotEncodedAction {
+    fn into_action(self, state: &CreatureState) -> CreatureAction;
+}
+
+impl OneHotEncodedAction for [f32; 4] {
+    fn into_action(self, state: &CreatureState) -> CreatureAction {
+        let one_hot = self.map(|v| v.clamp(0.0, 1.0));
+
+        let mut largest_action = (0, 0);
+        let mut largest_confidence = 0.0;
+        for (i, confidence) in one_hot.into_iter().enumerate() {
+            if confidence > largest_confidence {
+                largest_action = CreatureAction::DIRECTIONS[i];
+                largest_confidence = confidence;
+            }
+        }
+
+        if largest_action == (0, 0) {
+            CreatureAction::DoNothing
+        } else {
+            match state.slice[Pos(3, 3) + largest_action] {
+                Tile::Empty => CreatureAction::Move(largest_action.0, largest_action.1),
+                Tile::OutOfBounds => CreatureAction::DoNothing,
+                _ => CreatureAction::Attack(largest_action.0, largest_action.1),
+            }
+        }
     }
 }
 
@@ -98,7 +127,7 @@ impl State for CreatureState {
                 Tile::Empty => {
                     actions.push(CreatureAction::Move(direction.0, direction.1));
                     if self.food > 0 {
-                        actions.push(CreatureAction::BuildWall(direction.0, direction.1));
+                        // actions.push(CreatureAction::BuildWall(direction.0, direction.1));
                     }
                 }
                 Tile::Bush(true) | Tile::Creature { .. } | Tile::Wall { .. } => {
@@ -186,7 +215,7 @@ impl SimConfig {
     }
 }
 
-pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 12, 128>;
+pub type SpeciesModel = DQNAgentTrainer<CreatureState, 100, 4, 128>;
 
 pub fn train_moons(world: &mut World, models: &mut Vec<SpeciesModel>, num_moons: usize) {
     let mut species_data = Vec::new();

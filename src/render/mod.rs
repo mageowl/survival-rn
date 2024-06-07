@@ -5,9 +5,10 @@ use raylib::{
     ffi::TraceLogLevel,
     math::Vector2,
 };
+use rurel::mdp::State;
 
 use crate::{
-    train::{CreatureState, SpeciesModel},
+    train::{CreatureState, OneHotEncodedAction, SpeciesModel},
     util::{GRID_HEIGHT, GRID_WIDTH, TILE_SIZE},
     world::World,
 };
@@ -48,7 +49,8 @@ pub fn run_simulation(world: &mut World, models: Vec<SpeciesModel>) {
                 species.members.borrow_mut();
                 for creature in 0..num_creatures {
                     let state = CreatureState::new(&species, time_left, creature);
-                    species.handle_action(models[i].best_action(&state).unwrap(), creature)
+                    let action = models[i].expected_value(&state).into_action(&state);
+                    species.handle_action(action, creature)
                 }
             }
             world.finish_step();

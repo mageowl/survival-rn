@@ -1,7 +1,7 @@
 use std::io;
 
 use render::run_simulation;
-use train::{train_iters, train_moons};
+use train::train_iters;
 use util::HEPT32;
 use world::{species::SpeciesConfig, SimConfig, World};
 
@@ -29,7 +29,7 @@ const CONFIG: SimConfig = SimConfig {
 };
 
 fn main() {
-    let models = train_iters(CONFIG, 1, 10);
+    let models = train_iters(CONFIG, 10, 10);
 
     println!("Press ENTER to start simulation.");
     let mut buf = String::new();
